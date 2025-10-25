@@ -2,6 +2,7 @@
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -20,25 +21,33 @@ namespace GUI_FOR_BOOK
         private BookViewModel _viewModel;
         private string[] _lines;
         private int _currentPage = 0;
-        private TextBlock _textBlock;
+        private TextBox _textBox;
         private TextBlock _pagination;
         private int totalPages;
+        private Popup _selectionPopup;
 
         public MainWindow()
         {
             InitializeComponent();
 
             _lines = File.ReadAllLines("Sample1.txt");
-            const int LINES_PER_PAGE = 78;
+            const int LINES_PER_PAGE = 100;
             totalPages = (int)Math.Ceiling((double)_lines.Length / (LINES_PER_PAGE));
 
             // Создание UI
             var stack = new StackPanel();
 
-            _textBlock = new TextBlock();
-            _textBlock.TextWrapping = TextWrapping.Wrap;
-            _textBlock.Height = 800;
-            _textBlock.FontSize = 20;
+            _textBox = new TextBox();
+            _textBox.TextWrapping = TextWrapping.Wrap;
+            _textBox.Height = 900;
+            _textBox.FontSize = 20;
+            _textBox.Padding = new Thickness(10); // Отступы внутри
+            _textBox.IsReadOnly = true; // Запрещаем редактирование
+            _textBox.BorderThickness = new Thickness(0); // Убираем границу
+            _textBox.VerticalScrollBarVisibility = ScrollBarVisibility.Auto; // Прокрутк
+            _textBox.Background = Brushes.White; // Белый фон как у TextBlock
+
+            _textBox.SelectionChanged += TextBox_SelectionChanged;
 
             _pagination = new TextBlock()
             {
@@ -85,7 +94,7 @@ namespace GUI_FOR_BOOK
             panel.Children.Add(prevBtn);
             panel.Children.Add(nextBtn);
 
-            stack.Children.Add(_textBlock);
+            stack.Children.Add(_textBox);
             stack.Children.Add(_pagination);
             stack.Children.Add(panel);
 
@@ -103,6 +112,67 @@ namespace GUI_FOR_BOOK
         //     var text = string.Join("\n", _lines.Skip(start).Take(29));
         //     _textBlock.Text = $"Страница {_currentPage + 1}\n{text}";
         // }
+        private void TextBox_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            if (_textBox.SelectionLength > 0)
+            {
+                string selectedText = _textBox.SelectedText.Trim();
+
+                if (!string.IsNullOrEmpty(selectedText) && selectedText.Length > 0)
+                {
+                    ShowPopupAboveSelection(selectedText);
+                }
+            }
+            else
+            {
+                // Скрываем popup когда выделение снято
+                if (_selectionPopup != null)
+                    _selectionPopup.IsOpen = false;
+            }
+        }
+
+        private void ShowPopupAboveSelection(string text)
+        {
+            // Создаем popup если его нет
+            if (_selectionPopup == null)
+            {
+                _selectionPopup = new Popup();
+                _selectionPopup.Placement = PlacementMode.Relative;
+                _selectionPopup.PlacementTarget = _textBox;
+
+                var new_border = new Border()
+                {
+                    Background = Brushes.LightYellow,
+                    BorderBrush = Brushes.Gray,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(4),
+                    Padding = new Thickness(8),
+                    MaxWidth = 300,
+                };
+
+                var textBlock = new TextBlock()
+                {
+                    Text = text,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = Brushes.Black,
+                    TextWrapping = TextWrapping.Wrap,
+                };
+
+                new_border.Child = textBlock;
+                _selectionPopup.Child = new_border;
+            }
+
+            // Обновляем текст
+            if (_selectionPopup.Child is Border border && border.Child is TextBlock popupText)
+            {
+                popupText.Text = $"{text}";
+            }
+
+            // ПРОСТАЯ ПОЗИЦИЯ - в центре над TextBox
+            _selectionPopup.HorizontalOffset = 50;
+            _selectionPopup.VerticalOffset = -60;
+            _selectionPopup.IsOpen = true;
+        }
 
         private void ShowPage()
         {
@@ -136,7 +206,7 @@ namespace GUI_FOR_BOOK
             // );
             // stringBuilder.AppendLine(new string('=', 40));
 
-            _textBlock.Text = stringBuilder.ToString();
+            _textBox.Text = stringBuilder.ToString();
 
             _pagination.Text = $"Страница {_currentPage + 1} из {totalPages}";
         }
