@@ -21,49 +21,72 @@ namespace GUI_FOR_BOOK
         private string[] _lines;
         private int _currentPage = 0;
         private TextBlock _textBlock;
+        private TextBlock _pagination;
+        private int totalPages;
 
         public MainWindow()
         {
             InitializeComponent();
 
             _lines = File.ReadAllLines("Sample1.txt");
+            const int LINES_PER_PAGE = 78;
+            totalPages = (int)Math.Ceiling((double)_lines.Length / (LINES_PER_PAGE));
 
             // Создание UI
             var stack = new StackPanel();
-
-            // _textBlock = new TextBlock();
-            // _textBlock.Text = "Этот текст неподвижен";
-            // _textBlock.FontSize = 20;
-            // _textBlock.Foreground = Brushes.Black;
-            // _textBlock.TextWrapping = TextWrapping.Wrap;
-            // _textBlock.HorizontalAlignment = HorizontalAlignment.Center;
-            // _textBlock.VerticalAlignment = VerticalAlignment.Center;
-            // _textBlock.Margin = new Thickness(40);
 
             _textBlock = new TextBlock();
             _textBlock.TextWrapping = TextWrapping.Wrap;
             _textBlock.Height = 800;
             _textBlock.FontSize = 20;
 
-            var nextBtn = new Button() { Content = "Next", Width = 100 };
+            _pagination = new TextBlock()
+            {
+                // Text = $"{_currentPage} из {totalPages}",
+                FontSize = 20,
+                FontWeight = FontWeights.Bold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 0, 0, 20),
+            };
+
+            var nextBtn = new Button()
+            {
+                Content = "Next",
+                Width = 100,
+                Margin = new Thickness(10, 5, 10, 5), // Отступы: слева, сверху, справа, снизу
+                HorizontalAlignment = HorizontalAlignment.Right, // Выравнивание по правому краю
+                VerticalAlignment = VerticalAlignment.Bottom,
+            };
             nextBtn.Click += (s, e) =>
             {
                 _currentPage++;
                 ShowPage();
             };
 
-            var prevBtn = new Button() { Content = "Back", Width = 100 };
+            var prevBtn = new Button()
+            {
+                Content = "Back",
+                Width = 100,
+                Margin = new Thickness(10, 5, 10, 5),
+                HorizontalAlignment = HorizontalAlignment.Left, // Выравнивание по левому краю
+                VerticalAlignment = VerticalAlignment.Bottom,
+            };
             prevBtn.Click += (s, e) =>
             {
                 _currentPage--;
                 ShowPage();
             };
             // panel to unite buttons
-            var panel = new StackPanel() { Orientation = Orientation.Horizontal };
+            var panel = new StackPanel()
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Center,
+            };
             panel.Children.Add(prevBtn);
             panel.Children.Add(nextBtn);
 
             stack.Children.Add(_textBlock);
+            stack.Children.Add(_pagination);
             stack.Children.Add(panel);
 
             this.Content = stack;
@@ -83,26 +106,39 @@ namespace GUI_FOR_BOOK
 
         private void ShowPage()
         {
-            const int LINES_PER_PAGE = 29; // Сколько строк на одной странице
+            // const int INFO_LINES = 16; // 2 отступа + 2 строки информации
+            const int LINES_PER_PAGE = 29;
+
+            // КОРРЕКТИРУЕМ текущую страницу (на случай если вышли за границы)
+            _currentPage = Math.Max(0, Math.Min(_currentPage, totalPages - 1));
 
             int start_index = _currentPage * LINES_PER_PAGE;
             int end_index = Math.Min(start_index + LINES_PER_PAGE, _lines.Length);
 
-            // 2. Вычисляем общее количество страниц
-            int totalPages = (int)Math.Ceiling((double)_lines.Length / LINES_PER_PAGE);
+            // Проверяем, не выходим ли мы за пределы с учетом информации о странице
+            if (end_index - start_index > LINES_PER_PAGE)
+            {
+                end_index = start_index + (LINES_PER_PAGE);
+            }
 
             StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.AppendLine($"Страница {_currentPage + 1} из {totalPages}");
-            stringBuilder.AppendLine(new string('=', 40));
 
-            // 3. Берем только строки для ТЕКУЩЕЙ страницы
             for (int i = start_index; i < end_index; i++)
             {
                 stringBuilder.AppendLine(_lines[i]);
             }
 
-            // 4. Обновляем интерфейс
+            // Гарантированно добавляем информацию о странице
+            // stringBuilder.AppendLine();
+            // stringBuilder.AppendLine();
+            // stringBuilder.AppendLine(
+            //     $"{new string(' ', 150)}Страница {_currentPage + 1} из {totalPages}"
+            // );
+            // stringBuilder.AppendLine(new string('=', 40));
+
             _textBlock.Text = stringBuilder.ToString();
+
+            _pagination.Text = $"Страница {_currentPage + 1} из {totalPages}";
         }
     }
 }
